@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import sys
 import time
+from datetime import datetime, timezone
 import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -113,7 +114,9 @@ def poll(previous: dict[str, Incident] | None) -> dict[str, Incident]:
         for incident in changed:
             print_incident(incident)
     else:
-        print("No new or updated incidents.", flush=True)
+        print("No new or updated incidents.")
+    checked_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    print(f"\nCurrent time (UTC): {checked_at}", flush=True)
     return current
 
 

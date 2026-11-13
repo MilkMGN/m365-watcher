@@ -1,5 +1,6 @@
 import unittest
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import watcher
@@ -62,6 +63,18 @@ class PollTests(unittest.TestCase):
         outputs = [call.args[0] for call in print_mock.call_args_list if call.args]
         self.assertEqual(sum(output.startswith("\nIncident") for output in outputs), 2)
         self.assertTrue(any("Updated" in output for output in outputs))
+
+    def test_prints_current_utc_time_at_bottom(self):
+        fixed_time = datetime(2026, 11, 13, 1, 6, 17, tzinfo=timezone.utc)
+        with patch.object(watcher, "fetch_incidents", return_value=[]):
+            with patch.object(watcher, "datetime") as datetime_mock:
+                datetime_mock.now.return_value = fixed_time
+                with patch("builtins.print") as print_mock:
+                    watcher.poll(None)
+
+        outputs = [call.args[0] for call in print_mock.call_args_list if call.args]
+        self.assertEqual(outputs[-1], "\nCurrent time (UTC): 2026-11-13 01:06:17")
+        datetime_mock.now.assert_called_once_with(timezone.utc)
 
 
 if __name__ == "__main__":
