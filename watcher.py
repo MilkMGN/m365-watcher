@@ -110,11 +110,12 @@ def poll(previous: dict[str, Incident] | None) -> dict[str, Incident]:
         if previous is None or previous.get(incident.key) != incident
     ]
 
-    if changed:
-        for incident in changed:
-            print_incident(incident)
-    else:
-        print("No new or updated incidents.")
+    if not changed:
+        return current
+
+    clear_terminal()
+    for incident in changed:
+        print_incident(incident)
     checked_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     print(f"\nCurrent time (UTC): {checked_at}", flush=True)
     return current
@@ -134,7 +135,6 @@ def main() -> int:
     while True:
         try:
             time.sleep(POLL_INTERVAL_SECONDS)
-            clear_terminal()
             known_incidents = poll(known_incidents)
         except KeyboardInterrupt:
             print("\nStopped.")
