@@ -51,6 +51,22 @@ class FeedParsingTests(unittest.TestCase):
         self.assertEqual(incidents[0].description, "Users are affected.")
 
 
+class WaitForRefreshTests(unittest.TestCase):
+    def test_wait_for_refresh_returns_true_on_enter(self):
+        with patch.object(watcher.os, "name", "posix"):
+            with patch.object(watcher.sys.stdin, "isatty", return_value=True):
+                with patch.object(watcher.select, "select", return_value=([watcher.sys.stdin], [], [])):
+                    with patch.object(watcher.sys.stdin, "read", return_value="\n"):
+                        self.assertTrue(watcher.wait_for_refresh(5))
+
+    def test_wait_for_refresh_times_out_when_no_enter(self):
+        with patch.object(watcher.os, "name", "posix"):
+            with patch.object(watcher.sys.stdin, "isatty", return_value=True):
+                with patch.object(watcher.select, "select", return_value=([], [], [])):
+                    with patch.object(watcher.time, "sleep"):
+                        self.assertFalse(watcher.wait_for_refresh(0.1))
+
+
 class PollTests(unittest.TestCase):
     def test_prints_only_new_or_changed_incidents(self):
         initial = watcher.Incident("one", "Incident", "date", "Active", "link", "Initial")

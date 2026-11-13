@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import os
+import select
 import sys
 import time
 from datetime import datetime, timezone
@@ -11,6 +13,9 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from typing import NamedTuple
+
+if os.name == "nt":
+    import msvcrt
 
 FEED_URL = "https://status.cloud.microsoft/api/feed/mac"
 POLL_INTERVAL_SECONDS = 5 * 60
@@ -101,6 +106,46 @@ def print_incident(incident: Incident) -> None:
     print(flush=True)
 
 
+def wait_for_refresh(interval_seconds: float) -> bool:
+    if not sys.stdin or not sys.stdin.isatty():
+        time.sleep(interval_seconds)
+        return False
+
+    deadline = time.monotonic() + interval_seconds
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return False
+
+        if os.name == "nt":
+            if msvcrt.kbhit():
+                key = msvcrt.getwch()
+                if key in {"\r", "\n"}:
+                    return True
+                if key in {"\x00", "\xe0"}:
+                    msvcrt.getwch()
+            time.sleep(min(0.1, remaining))
+            continue
+
+        try:
+            ready, _, _ = select.select([sys.stdin], [], [], min(0.1, remaining))
+        except (OSError, ValueError):
+            time.sleep(min(0.1, remaining))
+            continue
+
+        if not ready:
+            continue
+
+        key = sys.stdin.read(1)
+        if key in {"\r", "\n"}:
+            return True
+
+        while True:
+            next_key = sys.stdin.read(1)
+            if not next_key or next_key in {"\r", "\n"}:
+                break
+
+
 def poll(previous: dict[str, Incident] | None) -> dict[str, Incident]:
     incidents = fetch_incidents()
     current = {incident.key: incident for incident in incidents}
@@ -124,7 +169,7 @@ def poll(previous: dict[str, Incident] | None) -> dict[str, Incident]:
 def main() -> int:
     clear_terminal()
     print(f"Watching Microsoft 365 status feed: {FEED_URL}")
-    print("Checking now; refreshing every 5 minutes. Press Ctrl+C to stop.")
+    print("Checking now; refreshing every 5 minutes or press Enter to refresh now. Press Ctrl+C to stop.")
 
     try:
         known_incidents = poll(None)
@@ -134,7 +179,7 @@ def main() -> int:
 
     while True:
         try:
-            time.sleep(POLL_INTERVAL_SECONDS)
+            wait_for_refresh(POLL_INTERVAL_SECONDS)
             known_incidents = poll(known_incidents)
         except KeyboardInterrupt:
             print("\nStopped.")

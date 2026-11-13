@@ -11,9 +11,10 @@ Requires Python 3.10 or later.
 python3 watcher.py
 ```
 
-The app checks the feed immediately, then refreshes every five minutes. It prints
-the current feed entries on startup and only prints entries again when their
-content changes. Press `Ctrl+C` to stop.
+The app checks the feed immediately, then refreshes every five minutes, or
+whenever you press `Enter` in the terminal. It prints the current feed entries
+on startup and only prints entries again when their content changes. Press
+`Ctrl+C` to stop.
 
 ## Test
 
